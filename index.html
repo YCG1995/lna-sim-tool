@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <title>两级 LNA 级联仿真工具</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #333; padding: 20px; }
@@ -35,8 +42,10 @@
   .tab.active { background: #fff; color: #3498db; font-weight: 600; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
-  .formula { background: #f8f9fa; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 13px; line-height: 1.8; color: #2c3e50; margin: 8px 0; }
-  .formula b { color: #e74c3c; }
+  .formula-box { background: #f8f9fa; border-radius: 6px; padding: 16px; margin: 10px 0; line-height: 2; font-size: 14px; }
+  .formula-box p { margin: 8px 0; }
+  .formula-box .title { font-weight: 600; color: #2c3e50; margin-top: 16px; margin-bottom: 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+  .eq { text-align: center; margin: 12px 0; }
 </style>
 </head>
 <body>
@@ -182,7 +191,7 @@
           <div class="stat-value" id="stat_b3">--</div>
         </div>
       </div>
-      <div style="font-size:11px; color:#888; margin-top:8px; text-align:center;">格式：增益dB / K值（绿=稳定 黄=临界 红=危险）</div>
+      <div style="font-size:11px; color:#888; margin-top:8px; text-align:center;">格式：增益dB / K值（绿=稳定 K&gt;2.5，黄=临界 K&gt;1.5，红=危险 K&lt;1.5）</div>
     </div>
     <div class="grid">
       <div class="panel">
@@ -253,55 +262,84 @@
   <div class="tab-content" id="tab2">
     <div class="panel">
       <div class="panel-title">二端口网络与 S 参数</div>
-      <div class="formula">
-        <b>S 参数定义：</b><br>
-        S11 = b1/a1 | a2=0 &nbsp;&nbsp;（输入反射系数）<br>
-        S21 = b2/a1 | a2=0 &nbsp;&nbsp;（正向增益）<br>
-        S12 = b1/a2 | a1=0 &nbsp;&nbsp;（反向隔离）<br>
-        S22 = b2/a2 | a1=0 &nbsp;&nbsp;（输出反射系数）<br><br>
-        <b>级联计算：</b>用 ABCD（传输）矩阵相乘<br>
-        总网络 = LNA1_ABCD × Match_ABCD × LNA2_ABCD
+      <div class="formula-box">
+        <p><b>S 参数定义：</b>（端口2接匹配负载时测量）</p>
+        <div class="eq">$$ S_{11} = \frac{b_1}{a_1}\bigg|_{a_2=0} \quad \text{（输入反射系数）} $$</div>
+        <div class="eq">$$ S_{21} = \frac{b_2}{a_1}\bigg|_{a_2=0} \quad \text{（正向增益）} $$</div>
+        <div class="eq">$$ S_{12} = \frac{b_1}{a_2}\bigg|_{a_1=0} \quad \text{（反向隔离）} $$</div>
+        <div class="eq">$$ S_{22} = \frac{b_2}{a_2}\bigg|_{a_1=0} \quad \text{（输出反射系数）} $$</div>
+        <p><b>级联计算：</b>用 ABCD（传输）矩阵相乘</p>
+        <div class="eq">$$ \mathbf{A}_{total} = \mathbf{A}_{LNA1} \cdot \mathbf{A}_{Match} \cdot \mathbf{A}_{LNA2} $$</div>
       </div>
     </div>
     <div class="grid">
       <div class="panel">
         <div class="panel-title">稳定性因子 K</div>
-        <div class="formula">
-          <b>无条件稳定判据：</b><br>
-          K &gt; 1 且 |Δ| &lt; 1<br><br>
-          <b>K 计算公式：</b><br>
-          K = (1 - |S11|² - |S22|² + |Δ|²)<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;/ (2 · |S21 · S12|)<br><br>
-          <b>Δ 计算：</b><br>
-          Δ = S11·S22 - S12·S21<br><br>
-          <b>物理意义：</b><br>
-          K 越大越稳定，增益越高 K 越小<br>
-          两级级联 K 暴跌，必须加阻尼
+        <div class="formula-box">
+          <p><b>无条件稳定判据：</b></p>
+          <div class="eq">$$ K > 1 \quad \text{且} \quad |\Delta| < 1 $$</div>
+          <p><b>K 计算公式：</b></p>
+          <div class="eq">$$ K = \frac{1 - |S_{11}|^2 - |S_{22}|^2 + |\Delta|^2}{2 \cdot |S_{21} \cdot S_{12}|} $$</div>
+          <p><b>Δ 计算：</b></p>
+          <div class="eq">$$ \Delta = S_{11} \cdot S_{22} - S_{12} \cdot S_{21} $$</div>
+          <p><b>物理意义：</b></p>
+          <p>K 越大越稳定，增益越高 K 越小</p>
+          <p>两级级联 K 暴跌，必须加阻尼电阻</p>
         </div>
       </div>
       <div class="panel">
-        <div class="panel-title">匹配网络原理</div>
-        <div class="formula">
-          <b>串联电感阻抗：</b><br>
-          Z_L = jωL = 2πf · L<br><br>
-          <b>串联电容阻抗：</b><br>
-          Z_C = 1/(jωC) = 1/(2πf · C)<br><br>
-          <b>并联电容导纳：</b><br>
-          Y_C = jωC<br><br>
-          <b>π 型匹配网络：</b><br>
-          串联电感 + 并联电容 + 串联电容 + 并联电容 + 串联电感<br>
-          感抗随频率↑而↑，容抗随频率↑而↓<br>
-          两者抵消 → 宽带匹配
+        <div class="panel-title">匹配网络阻抗公式</div>
+        <div class="formula-box">
+          <p><b>串联电感阻抗：</b></p>
+          <div class="eq">$$ Z_L = j\omega L = j \cdot 2\pi f \cdot L $$</div>
+          <p><b>串联电容阻抗：</b></p>
+          <div class="eq">$$ Z_C = \frac{1}{j\omega C} = \frac{1}{j \cdot 2\pi f \cdot C} $$</div>
+          <p><b>并联电容导纳：</b></p>
+          <div class="eq">$$ Y_C = j\omega C $$</div>
+          <p><b>π 型匹配网络：</b></p>
+          <p>串联电感 → 并联电容 → 串联电容 → 并联电容 → 串联电感</p>
+          <p>感抗随频率↑而↑，容抗随频率↑而↓，两者抵消 → 宽带匹配</p>
         </div>
       </div>
     </div>
     <div class="panel">
+      <div class="panel-title">输出电感带宽推导（为什么加 L2 就变宽带）</div>
+      <div class="formula-box">
+        <p class="title">等效电路模型</p>
+        <p>LNA 输出内部等效为 R_out 并联 C_out，外部串联 L2 到 50Ω 负载：</p>
+        <div class="eq">$$ Z_{out} = R_{out} \parallel \frac{1}{j\omega C_{out}} = \frac{R_{out}}{1 + j\omega R_{out} C_{out}} $$</div>
+        <p class="title">情况一：不加 L2（窄带模式）</p>
+        <p>输出直接接 50Ω，反射系数：</p>
+        <div class="eq">$$ S_{22} = \frac{Z_{out} - Z_0}{Z_{out} + Z_0} $$</div>
+        <p>只有在某个特定频率 f₀ 附近容抗刚好和 R_out 形成匹配，偏离后迅速恶化，带宽窄。</p>
+        <p class="title">情况二：加 L2（宽带模式）</p>
+        <p>总输出阻抗：</p>
+        <div class="eq">$$ Z_{total} = j\omega L_2 + \frac{R_{out}}{1 + j\omega R_{out} C_{out}} $$</div>
+        <p><b>频率补偿原理：</b></p>
+        <p>低频段：容抗大（C_out 影响小），感抗也小（L2 影响小）→ 输出接近 R_out</p>
+        <p>中频段：感抗和容抗互相抵消 → 接近 50Ω</p>
+        <p>高频段：容抗小（C_out 旁路多），感抗大（L2 串联多）→ 两者抵消后仍接近 50Ω</p>
+        <p class="title">最佳匹配频率（串联谐振点）</p>
+        <p>当感抗 = 容抗时：</p>
+        <div class="eq">$$ \omega_0 L_2 = \frac{1}{\omega_0 C_{out}} $$</div>
+        <div class="eq">$$ f_0 = \frac{1}{2\pi \sqrt{L_2 C_{out}}} $$</div>
+        <p class="title">带宽估算公式</p>
+        <p>品质因数 Q：</p>
+        <div class="eq">$$ Q \approx \frac{R_{out}}{Z_0} \cdot \frac{1}{\sqrt{1 + (R_{out}/Z_0)^2}} $$</div>
+        <p>近似带宽（S22 &lt; -10dB）：</p>
+        <div class="eq">$$ BW \approx \frac{f_0}{Q} $$</div>
+        <p><b>举例：</b>R_out = 200Ω，C_out = 1pF，L2 = 5.1nH</p>
+        <div class="eq">$$ f_0 = \frac{1}{2\pi\sqrt{5.1nH \times 1pF}} \approx 2.2 \, \text{GHz} $$</div>
+        <div class="eq">$$ Q \approx 2.5, \quad BW \approx 0.88 \, \text{GHz} $$</div>
+      </div>
+    </div>
+    <div class="panel">
       <div class="panel-title">GNSS 频段参考</div>
-      <div class="formula" style="font-size:14px;">
-        <b>GPS：</b>L1 = 1575.42 MHz，L5 = 1176.45 MHz<br>
-        <b>北斗：</b>B1 = 1561.098 MHz，B2 = 1207.14 MHz，B3 = 1268.52 MHz<br>
-        <b>GLONASS：</b>L1 = 1602 MHz，L2 = 1246 MHz<br>
-        <b>Galileo：</b>E1 = 1575.42 MHz，E5b = 1207.14 MHz
+      <div class="formula-box" style="font-size:15px; line-height:2.2;">
+        <p><b>GPS：</b>L₁ = 1575.42 MHz，L₅ = 1176.45 MHz</p>
+        <p><b>北斗：</b>B₁ = 1561.098 MHz，B₂ = 1207.14 MHz，B₃ = 1268.52 MHz</p>
+        <p><b>GLONASS：</b>L₁ = 1602 MHz，L₂ = 1246 MHz</p>
+        <p><b>Galileo：</b>E₁ = 1575.42 MHz，E₅b = 1207.14 MHz</p>
       </div>
     </div>
   </div>
@@ -361,6 +399,7 @@ function switchTab(idx) {
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
   document.querySelectorAll('.tab-content').forEach((t,i) => t.classList.toggle('active', i===idx));
   if (idx === 1) runSim2();
+  if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
 }
 let chartS21, chartK;
 function lnaSParams(f, gainDb, s11Db, s22Db, s12Db) {
