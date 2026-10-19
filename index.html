@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>两级 LNA 级联仿真工具</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #333; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 16px; color: #1a1a1a; }
+  .container { max-width: 1400px; margin: 0 auto; }
+  .panel { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .panel-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #2c3e50; border-left: 3px solid #3498db; padding-left: 8px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .param-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; }
+  .param-label { width: 160px; color: #555; }
+  .param-input { flex: 1; }
+  .param-value { width: 70px; text-align: right; font-family: monospace; font-weight: 600; color: #e74c3c; }
+  input[type=range] { width: 100%; }
+  .chart { width: 100%; height: 300px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+  .stat-card { background: #f8f9fa; border-radius: 6px; padding: 10px; text-align: center; }
+  .stat-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .stat-value { font-size: 18px; font-weight: 700; color: #2c3e50; font-family: monospace; }
+  .stat-good { color: #27ae60; }
+  .stat-warn { color: #f39c12; }
+  .stat-bad { color: #e74c3c; }
+  svg { width: 100%; height: auto; }
+  .btn { background: #3498db; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-right: 8px; }
+  .btn:hover { background: #2980b9; }
+  .btn-secondary { background: #95a5a6; }
+  .btn-secondary:hover { background: #7f8c8d; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab { padding: 10px 20px; background: #e0e4e8; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; }
+  .tab.active { background: #fff; color: #3498db; font-weight: 600; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>两级 LNA 级联仿真工具（ATR2652S）</h1>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(0)">两级级联仿真</div>
+    <div class="tab" onclick="switchTab(1)">输出电感带宽对比</div>
+  </div>
+  <div class="tab-content active" id="tab0">
+    <div class="panel">
+      <div class="panel-title">电路示意图</div>
+      <svg viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="30" cy="100" r="8" fill="none" stroke="#333" stroke-width="2"/>
+        <text x="30" y="130" text-anchor="middle" font-size="12" fill="#666">RF IN</text>
+        <line x1="38" y1="100" x2="80" y2="100" stroke="#333" stroke-width="2"/>
+        <line x1="80" y1="90" x2="80" y2="110" stroke="#333" stroke-width="2"/>
+        <line x1="86" y1="90" x2="86" y2="110" stroke="#333" stroke-width="2"/>
+        <text x="83" y="80" text-anchor="middle" font-size="11" fill="#e74c3c">C_in</text>
+        <line x1="86" y1="100" x2="130" y2="100" stroke="#333" stroke-width="2"/>
+        <path d="M 130 100 q 5 -10 10 0 q 5 10 10 0 q 5 -10 10 0 q 5 10 10 0" fill="none" stroke="#333" stroke-width="2"/>
+        <text x="150" y="80" text-anchor="middle" font-size="11" fill="#e74c3c">L_in</text>
+        <line x1="170" y1="100" x2="220" y2="100" stroke="#333" stroke-width="2"/>
+        <rect x="220" y="70" width="100" height="60" fill="#eaf2f8" stroke="#3498db" stroke-width="2" rx="4"/>
+        <text x="270" y="105" text-anchor="middle" font-size="14" font-weight="bold" fill="#2c3e50">LNA1</text>
+        <text x="270" y="120" text-anchor="middle" font-size="10" fill="#888">ATR2652S</text>
+        <line x1="320" y1="100" x2="370" y2="100" stroke="#333" stroke-width="2"/>
+        <path d="M 370 100 q 5 -10 10 0 q 5 10 10 0 q 5 -10 10 0" fill="none" stroke="#333" stroke-width="2"/>
+        <text x="390" y="80" text-anchor="middle" font-size="11" fill="#e74c3c">La</text>
+        <line x1="400" y1="100" x2="430" y2="100" stroke="#333" stroke-width="2"/>
+        <rect x="430" y="92" width="24" height="16" fill="#fdebd0" stroke="#e67e22" stroke-width="1.5"/>
+        <text x="442" y="80" text-anchor="middle" font-size="11" fill="#e67e22">Rs</text>
+        <line x1="454" y1="100" x2="490" y2="100" stroke="#333" stroke-width="2"/>
+        <line x1="490" y1="100" x2="490" y2="130" stroke="#333" stroke-width="2"/>
+        <line x1="484" y1="130" x2="496" y2="130" stroke="#333" stroke-width="2"/>
+        <line x1="484" y1="136" x2="496" y2="136" stroke="#333" stroke-width="2"/>
+        <text x="510" y="135" font-size="11" fill="#e74c3c">Cg</text>
+        <line x1="490" y1="100" x2="530" y2="100" stroke="#333" stroke-width="2"/>
+        <line x1="530" y1="90" x2="530" y2="110" stroke="#333" stroke-width="2"/>
+        <line x1="536" y1="90" x2="536" y2="110" stroke="#333" stroke-width="2"/>
+        <text x="533" y="80" text-anchor="middle" font-size="11" fill="#e74c3c">Cb</text>
+        <line x1="536" y1="100" x2="570" y2="100" stroke="#333" stroke-width="2"/>
+        <line x1="570" y1="100" x2="570" y2="130" stroke="#333" stroke-width="2"/>
+        <line x1="564" y1="130" x2="576" y2="130" stroke="#333" stroke-width="2"/>
+        <line x1="564" y1="136" x2="576" y2="136" stroke="#333" stroke-width="2"/>
+        <text x="590" y="135" font-size="11" fill="#e74c3c">Cg</text>
+        <line x1="570" y1="100" x2="620" y2="100" stroke="#333" stroke-width="2"/>
+        <path d="M 620 100 q 5 -10 10 0 q 5 10 10 0 q 5 -10 10 0 q 5 10 10 0" fill="none" stroke="#333" stroke-width="2"/>
+        <text x="640" y="80" text-anchor="middle" font-size="11" fill="#e74c3c">Lc</text>
+        <line x1="660" y1="100" x2="710" y2="100" stroke="#333" stroke-width="2"/>
+        <rect x="710" y="70" width="100" height="60" fill="#eaf2f8" stroke="#3498db" stroke-width="2" rx="4"/>
+        <text x="760" y="105" text-anchor="middle" font-size="14" font-weight="bold" fill="#2c3e50">LNA2</text>
+        <text x="760" y="120" text-anchor="middle" font-size="10" fill="#888">ATR2652S</text>
+        <line x1="810" y1="100" x2="860" y2="100" stroke="#333" stroke-width="2"/>
+        <path d="M 860 100 q 5 -10 10 0 q 5 10 10 0 q 5 -10 10 0" fill="none" stroke="#333" stroke-width="2"/>
+        <text x="880" y="80" text-anchor="middle" font-size="11" fill="#e74c3c">L_out</text>
+        <line x1="900" y1="100" x2="950" y2="100" stroke="#333" stroke-width="2"/>
+        <line x1="950" y1="90" x2="950" y2="110" stroke="#333" stroke-width="2"/>
+        <line x1="956" y1="90" x2="956" y2="110" stroke="#333" stroke-width="2"/>
+        <text x="953" y="80" text-anchor="middle" font-size="11" fill="#e74c3c">C_out</text>
+        <line x1="956" y1="100" x2="1020" y2="100" stroke="#333" stroke-width="2"/>
+        <circle cx="1028" cy="100" r="8" fill="none" stroke="#333" stroke-width="2"/>
+        <text x="1028" y="130" text-anchor="middle" font-size="12" fill="#666">RF OUT</text>
+      </svg>
+    </div>
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-title">LNA 参数（ATR2652S）</div>
+        <div class="param-row">
+          <span class="param-label">增益 S21 (dB)</span>
+          <input type="range" class="param-input" id="gain" min="15" max="25" step="0.5" value="20.5">
+          <span class="param-value" id="gain_val">20.5</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">输入回损 S11 (dB)</span>
+          <input type="range" class="param-input" id="s11" min="-20" max="-5" step="0.5" value="-10">
+          <span class="param-value" id="s11_val">-10</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">输出回损 S22 (dB)</span>
+          <input type="range" class="param-input" id="s22" min="-20" max="-5" step="0.5" value="-11">
+          <span class="param-value" id="s22_val">-11</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">反向隔离 S12 (dB)</span>
+          <input type="range" class="param-input" id="s12" min="-40" max="-15" step="1" value="-29">
+          <span class="param-value" id="s12_val">-29</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">中间匹配网络参数</div>
+        <div class="param-row">
+          <span class="param-label">La 串联电感 (nH)</span>
+          <input type="range" class="param-input" id="la" min="0" max="10" step="0.1" value="3.9">
+          <span class="param-value" id="la_val">3.9</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">Cb 串联电容 (pF)</span>
+          <input type="range" class="param-input" id="cb" min="0.5" max="10" step="0.1" value="2.2">
+          <span class="param-value" id="cb_val">2.2</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">Lc 串联电感 (nH)</span>
+          <input type="range" class="param-input" id="lc" min="0" max="15" step="0.1" value="6.8">
+          <span class="param-value" id="lc_val">6.8</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">Cg 对地电容 (pF)</span>
+          <input type="range" class="param-input" id="cg" min="0" max="5" step="0.1" value="1.5">
+          <span class="param-value" id="cg_val">1.5</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">Rs 串联阻尼 (Ω)</span>
+          <input type="range" class="param-input" id="rs" min="0" max="30" step="1" value="15">
+          <span class="param-value" id="rs_val">15</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">关键指标 @ 1575MHz (L1)</div>
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">总增益 S21</div>
+          <div class="stat-value" id="stat_gain">-- dB</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">输入回损 S11</div>
+          <div class="stat-value" id="stat_s11">-- dB</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">稳定性因子 K</div>
+          <div class="stat-value" id="stat_k">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">最小 K 值</div>
+          <div class="stat-value" id="stat_kmin">--</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-title">总增益 S21 频率响应</div>
+        <div id="chart_s21" class="chart"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">稳定性因子 K</div>
+        <div id="chart_k" class="chart"></div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top: 16px;">
+      <button class="btn" onclick="runSim1()">运行仿真</button>
+      <button class="btn btn-secondary" onclick="resetParams1()">恢复默认</button>
+    </div>
+  </div>
+  <div class="tab-content" id="tab1">
+    <div class="panel">
+      <div class="panel-title">原理：为什么加输出串联电感就变宽带</div>
+      <p style="font-size:13px; line-height:1.6; color:#555;">
+        LNA 输出内部等效为 <b>高阻 R_out 并联寄生电容 C_out</b>。
+        不加电感时，输出直接接 50Ω，只有在某个窄频段刚好匹配。
+        加了串联电感 L2 后，感抗和容抗互相抵消，在更宽的频率范围内都接近 50Ω。
+      </p>
+    </div>
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-title">LNA 输出等效模型参数</div>
+        <div class="param-row">
+          <span class="param-label">输出电阻 R_out (Ω)</span>
+          <input type="range" class="param-input" id="r_out" min="50" max="500" step="10" value="200">
+          <span class="param-value" id="r_out_val">200</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">寄生电容 C_out (pF)</span>
+          <input type="range" class="param-input" id="c_out" min="0.2" max="3" step="0.1" value="1.0">
+          <span class="param-value" id="c_out_val">1.0</span>
+        </div>
+        <div class="param-row">
+          <span class="param-label">匹配电感 L2 (nH)</span>
+          <input type="range" class="param-input" id="l2" min="0" max="15" step="0.1" value="5.1">
+          <span class="param-value" id="l2_val">5.1</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">带宽统计（S22 &lt; -10dB）</div>
+        <div class="stats" style="grid-template-columns: 1fr 1fr;">
+          <div class="stat-card">
+            <div class="stat-label">不加 L2（窄带模式）</div>
+            <div class="stat-value" id="bw_no" style="font-size:14px;">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">加 L2（宽带模式）</div>
+            <div class="stat-value" id="bw_with" style="font-size:14px;">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">输出回损 S22 频率响应对比</div>
+      <div id="chart_s22" class="chart" style="height:350px;"></div>
+    </div>
+    <div style="text-align:center; margin-top: 16px;">
+      <button class="btn" onclick="runSim2()">运行仿真</button>
+    </div>
+  </div>
+</div>
+<script>
+const Z0 = 50;
+function cAdd(a, b) { return [a[0]+b[0], a[1]+b[1]]; }
+function cSub(a, b) { return [a[0]-b[0], a[1]-b[1]]; }
+function cMul(a, b) { return [a[0]*b[0]-a[1]*b[1], a[0]*b[1]+a[1]*b[0]]; }
+function cDiv(a, b) {
+  const d = b[0]*b[0] + b[1]*b[1];
+  return [(a[0]*b[0]+a[1]*b[1])/d, (a[1]*b[0]-a[0]*b[1])/d];
+}
+function cAbs(a) { return Math.sqrt(a[0]*a[0] + a[1]*a[1]); }
+function cFromRe(r) { return [r, 0]; }
+function cFromIm(i) { return [0, i]; }
+function cMulReal(a, r) { return [a[0]*r, a[1]*r]; }
+function cExpIm(angle) { return [Math.cos(angle), Math.sin(angle)]; }
+function seriesZ(Z) { return [[cFromRe(1), Z], [cFromRe(0), cFromRe(1)]]; }
+function shuntY(Y) { return [[cFromRe(1), cFromRe(0)], [Y, cFromRe(1)]]; }
+function matMul2(a, b) {
+  return [
+    [cAdd(cMul(a[0][0],b[0][0]), cMul(a[0][1],b[1][0])), cAdd(cMul(a[0][0],b[0][1]), cMul(a[0][1],b[1][1]))],
+    [cAdd(cMul(a[1][0],b[0][0]), cMul(a[1][1],b[1][0])), cAdd(cMul(a[1][0],b[0][1]), cMul(a[1][1],b[1][1]))]
+  ];
+}
+function sToAbcd(S, Z0) {
+  const S11=S[0][0], S12=S[0][1], S21=S[1][0], S22=S[1][1];
+  const one = cFromRe(1);
+  const t1 = cMul(cAdd(one,S11), cSub(one,S22));
+  const t2 = cMul(S12, S21);
+  const den = cMulReal(S21, 2);
+  const A = cDiv(cAdd(t1,t2), den);
+  const B = cMulReal(cDiv(cSub(cMul(cAdd(one,S11),cAdd(one,S22)), t2), den), Z0);
+  const C = cMulReal(cDiv(cSub(cMul(cSub(one,S11),cSub(one,S22)), t2), den), 1/Z0);
+  const D = cDiv(cAdd(cMul(cSub(one,S11),cAdd(one,S22)), t2), den);
+  return [[A,B],[C,D]];
+}
+function abcdToS(abcd, Z0) {
+  const A=abcd[0][0], B=abcd[0][1], C=abcd[1][0], D=abcd[1][1];
+  const bOverZ0 = cMulReal(B, 1/Z0);
+  const cTimesZ0 = cMulReal(C, Z0);
+  const denom = cAdd(cAdd(cAdd(A, bOverZ0), cTimesZ0), D);
+  const S11 = cDiv(cSub(cSub(cAdd(A, bOverZ0), cTimesZ0), D), denom);
+  const S12 = cDiv(cMulReal(cSub(cMul(A,D), cMul(B,C)), 2), denom);
+  const S21 = cDiv(cFromRe(2), denom);
+  const S22 = cDiv(cAdd(cAdd(cMulReal(A,-1), bOverZ0), cAdd(cMulReal(C,-Z0), D)), denom);
+  return [[S11,S12],[S21,S22]];
+}
+function stabilityFactor(S) {
+  const S11=S[0][0], S12=S[0][1], S21=S[1][0], S22=S[1][1];
+  const delta = cSub(cMul(S11,S22), cMul(S12,S21));
+  const K = (1 - cAbs(S11)**2 - cAbs(S22)**2 + cAbs(delta)**2) / (2 * cAbs(cMul(S21,S12)));
+  return { K: K, delta: cAbs(delta) };
+}
+function switchTab(idx) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.tab-content').forEach((t,i) => t.classList.toggle('active', i===idx));
+  if (idx === 1) runSim2();
+}
+let chartS21, chartK;
+function lnaSParams(f, gainDb, s11Db, s22Db, s12Db) {
+  const frac = Math.min(1, Math.max(0, (f - 1.176e9) / (1.575e9 - 1.176e9)));
+  const s21 = cFromRe(Math.pow(10, (gainDb - 0.2 + 0.4 * frac) / 20));
+  const s11mag = Math.pow(10, (s11Db) / 20);
+  const s22mag = Math.pow(10, (s22Db - 2 * frac) / 20);
+  const s12 = cFromRe(Math.pow(10, (s12Db - 2 * frac) / 20));
+  const s11 = cMulReal(cExpIm(Math.PI), s11mag);
+  const s22 = cMulReal(cExpIm(Math.PI*0.8), s22mag);
+  return [[s11,s12],[s21,s22]];
+}
+function matchNetwork(f, la, cg, cb, lc, rs) {
+  const w = 2 * Math.PI * f;
+  const Z_la = cFromIm(w * la * 1e-9);
+  const Y_cg = cFromIm(w * cg * 1e-12);
+  const Z_cb = cDiv(cFromRe(1), cFromIm(w * cb * 1e-12));
+  const Z_lc = cFromIm(w * lc * 1e-9);
+  const Z_rs = cFromRe(rs);
+  let net = [[cFromRe(1), cFromRe(0)], [cFromRe(0), cFromRe(1)]];
+  net = matMul2(net, seriesZ(cAdd(Z_la, Z_rs)));
+  net = matMul2(net, shuntY(Y_cg));
+  net = matMul2(net, seriesZ(Z_cb));
+  net = matMul2(net, shuntY(Y_cg));
+  net = matMul2(net, seriesZ(Z_lc));
+  return net;
+}
+function runSim1() {
+  ['gain','s11','s22','s12','la','cb','lc','cg','rs'].forEach(id => {
+    document.getElementById(id+'_val').textContent = document.getElementById(id).value;
+  });
+  const p = {
+    gain: parseFloat(document.getElementById('gain').value),
+    s11: parseFloat(document.getElementById('s11').value),
+    s22: parseFloat(document.getElementById('s22').value),
+    s12: parseFloat(document.getElementById('s12').value),
+    la: parseFloat(document.getElementById('la').value),
+    cb: parseFloat(document.getElementById('cb').value),
+    lc: parseFloat(document.getElementById('lc').value),
+    cg: parseFloat(document.getElementById('cg').value),
+    rs: parseFloat(document.getElementById('rs').value),
+  };
+  const freqs = [], s21Data = [], kData = [];
+  for (let f = 1.0e9; f <= 2.0e9; f += 5e6) {
+    freqs.push(f / 1e9);
+    const sLna = lnaSParams(f, p.gain, p.s11, p.s22, p.s12);
+    let abcd = sToAbcd(sLna, Z0);
+    abcd = matMul2(abcd, matchNetwork(f, p.la, p.cg, p.cb, p.lc, p.rs));
+    abcd = matMul2(abcd, sToAbcd(sLna, Z0));
+    const totalS = abcdToS(abcd, Z0);
+    s21Data.push(20 * Math.log10(cAbs(totalS[1][0])));
+    kData.push(stabilityFactor(totalS).K);
+  }
+  const idx1575 = Math.round((1.575 - 1.0) / 0.005);
+  document.getElementById('stat_gain').textContent = s21Data[idx1575].toFixed(1) + ' dB';
+  document.getElementById('stat_s11').textContent = p.s11.toFixed(1) + ' dB';
+  const kEl = document.getElementById('stat_k');
+  kEl.textContent = kData[idx1575].toFixed(2);
+  kEl.className = 'stat-value ' + (kData[idx1575] > 2.5 ? 'stat-good' : kData[idx1575] > 1.5 ? 'stat-warn' : 'stat-bad');
+  document.getElementById('stat_kmin').textContent = Math.min(...kData).toFixed(2);
+  if (!chartS21) chartS21 = echarts.init(document.getElementById('chart_s21'));
+  chartS21.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 20, bottom: 30 },
+    xAxis: { type: 'category', data: freqs.map(f=>f.toFixed(2)), name: 'GHz' },
+    yAxis: { type: 'value', name: 'dB' },
+    series: [{ data: s21Data, type: 'line', smooth: true, lineStyle: { width: 2, color: '#3498db' } }]
+  });
+  if (!chartK) chartK = echarts.init(document.getElementById('chart_k'));
+  chartK.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 20, bottom: 30 },
+    xAxis: { type: 'category', data: freqs.map(f=>f.toFixed(2)), name: 'GHz' },
+    yAxis: { type: 'value', name: 'K' },
+    series: [{ data: kData, type: 'line', smooth: true, lineStyle: { width: 2, color: '#e74c3c' },
+      markLine: { data: [{yAxis:1, lineStyle:{color:'red'}}, {yAxis:2.5, lineStyle:{color:'orange',type:'dashed'}}] } }]
+  });
+}
+function resetParams1() {
+  document.getElementById('gain').value = 20.5;
+  document.getElementById('s11').value = -10;
+  document.getElementById('s22').value = -11;
+  document.getElementById('s12').value = -29;
+  document.getElementById('la').value = 3.9;
+  document.getElementById('cb').value = 2.2;
+  document.getElementById('lc').value = 6.8;
+  document.getElementById('cg').value = 1.5;
+  document.getElementById('rs').value = 15;
+  runSim1();
+}
+let chartS22;
+function runSim2() {
+  ['r_out','c_out','l2'].forEach(id => {
+    document.getElementById(id+'_val').textContent = document.getElementById(id).value;
+  });
+  const rOut = parseFloat(document.getElementById('r_out').value);
+  const cOut = parseFloat(document.getElementById('c_out').value) * 1e-12;
+  const l2 = parseFloat(document.getElementById('l2').value) * 1e-9;
+  const freqs = [], s22No = [], s22With = [];
+  for (let f = 0.5e9; f <= 2.5e9; f += 5e6) {
+    freqs.push(f / 1e9);
+    const w = 2 * Math.PI * f;
+    const Zcout = [0, -1/(w*cOut)];
+    const Zout = cDiv([rOut * Zcout[0], rOut * Zcout[1]], cAdd([rOut, 0], Zcout));
+    const s22_0 = cDiv(cSub(Zout, [Z0,0]), cAdd(Zout, [Z0,0]));
+    s22No.push(20 * Math.log10(cAbs(s22_0)));
+    const Zl2 = [0, w * l2];
+    const Ztotal = cAdd(Zout, Zl2);
+    const s22_1 = cDiv(cSub(Ztotal, [Z0,0]), cAdd(Ztotal, [Z0,0]));
+    s22With.push(20 * Math.log10(cAbs(s22_1)));
+  }
+  function calcBw(data) {
+    let fMin = null, fMax = null;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] < -10) {
+        if (fMin === null) fMin = freqs[i];
+        fMax = freqs[i];
+      }
+    }
+    if (fMin === null) return '无匹配';
+    return fMin.toFixed(2) + ' ~ ' + fMax.toFixed(2) + ' GHz';
+  }
+  document.getElementById('bw_no').textContent = calcBw(s22No);
+  document.getElementById('bw_with').textContent = calcBw(s22With);
+  if (!chartS22) chartS22 = echarts.init(document.getElementById('chart_s22'));
+  chartS22.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['不加 L2（窄带）', '加 L2（宽带）'] },
+    grid: { left: 60, right: 30, top: 40, bottom: 40 },
+    xAxis: { type: 'category', data: freqs.map(f=>f.toFixed(2)), name: 'GHz' },
+    yAxis: { type: 'value', name: 'S22 (dB)', min: -30, max: 5 },
+    series: [
+      { name: '不加 L2（窄带）', data: s22No, type: 'line', smooth: true, lineStyle: { width: 2, color: '#e74c3c' },
+        markLine: { data: [{yAxis: -10, lineStyle: {color: 'gray', type: 'dashed'}}] } },
+      { name: '加 L2（宽带）', data: s22With, type: 'line', smooth: true, lineStyle: { width: 2, color: '#27ae60' } }
+    ]
+  });
+}
+window.onload = function() {
+  runSim1();
+  document.querySelectorAll('input[type=range]').forEach(el => {
+    el.addEventListener('input', () => {
+      if (document.getElementById('tab0').classList.contains('active')) runSim1();
+      else runSim2();
+    });
+  });
+};
+</script>
+</body>
+</html>
